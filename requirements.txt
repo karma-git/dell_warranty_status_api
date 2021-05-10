@@ -1,0 +1,5 @@
+humanize==3.5.0
+loguru==0.5.3
+prettytable==2.1.0
+pycountry==20.7.3
+requests==2.25.1
