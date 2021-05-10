@@ -1,12 +1,10 @@
 # Installation 
-
-`cd dell_warranty_api`
-
-`pip3 install -r requirements.txt  # либо через venv`
-
-Edit secrets.ini
+`pip install dell-warranty-api`
 
 # Usage
+
+## Specify secrets during first lunch
+Instruction here.
 
 ## Asset Warranty
 
@@ -22,9 +20,9 @@ $ python3 -m dell_api -w 1234567,2345678
 ```
 ### CLI could fetch service tags from a file.
 ```
-$ python3 -m dell_api -fw /Users/ah/st_example.txt
+$ dell_api -fw /Users/ah/st_example.txt
 OR w/o home 
-$ python3 -m dell_api -fw ~/st_example.txt
+$ dell_api -fw ~/st_example.txt
 +-------------+--------------------+-----------------+--------------------------+------------+
 | Service Tag |      Country       |     Warranty    |          Remain          |  End Date  |
 +-------------+--------------------+-----------------+--------------------------+------------+
@@ -39,9 +37,9 @@ $ cat st_example.txt
 ```
 ### JSON format
 ```
-$ python3 -m dell_api -fj ~/st_example.txt 
+$ dell_api -fj ~/st_example.txt 
 OR
-$ python3 -m dell_api -j 1234567,2345678,3456789      
+$ dell_api -j 1234567,2345678,3456789      
 [{'Service Tag': '2345678', 'Country': 'United States', 'Warranty': 'Basic', 'Remain': 'Expired', 'End Date': '2011-10-06'}, 
 {'Service Tag': '3456789', 'Country': 'Sweden', 'Warranty': 'Basic', 'Remain': 'Expired', 'End Date': '2007-11-03'}, 
 {'Service Tag': '1234567', 'Country': 'United States', 'Warranty': 'ProSupport', 'Remain': '4 years, 2 months and 1 days', 'End Date': '2025-07-10'}]
@@ -49,15 +47,15 @@ $ python3 -m dell_api -j 1234567,2345678,3456789
 ## Fetch from netbox
 ```
 $ nb -c device site=ACAE device_type.manufacturer.name=Dell --limit 10 | awk '{print $2}' | sed '1,2d;$d' > st_example.txt
-$ python3 -m dell_api -fw ~/st_example.txt
+$ dell_api -fw ~/st_example.txt
 ```
 ## Asset Details
 ### Table
 ! This API method could process with only one service tag! 
 ```
-$ python3 -m dell_api -d 1234567
+$ dell_api -d 1234567
 OR
-$ python3 -m dell_api -d $(head -n1 ~/st_example.txt)
+$ dell_api -d $(head -n1 ~/st_example.txt)
 +------------+------------+--------------+--------------------------------------+----------------------------------+
 | itemNumber | partNumber | partQuantity |           partDescription            |         itemDescription          |
 +------------+------------+--------------+--------------------------------------+----------------------------------+
@@ -73,6 +71,7 @@ $ python3 -m dell_api -d $(head -n1 ~/st_example.txt)
 ```
 ### JSON
 ```
+$ dell_api -ad $(head -n1 ~/st_example.txt)
 {
    "id":115282514,
    "serviceTag":"1234567",

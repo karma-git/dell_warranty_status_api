@@ -4,4 +4,4 @@ This Module contains handler for Dell TechDirect APIs (Warranty Status API)
 1 CLI interface for visualization API data
 """
 # Version of the dell_api package
-__version__ = "1.1.0"
+__version__ = "1.1.1"

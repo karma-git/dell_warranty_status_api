@@ -4,14 +4,15 @@ import json
 import datetime
 import os
 import sys
+from pathlib import Path
 import pycountry
 import re
 from prettytable import PrettyTable
 import argparse
+from getpass import getpass
 from humanize import precisedelta
 from loguru import logger
 import pretty_errors
-
 
 pretty_errors.configure(
     line_number_first=True,
@@ -20,7 +21,7 @@ pretty_errors.configure(
 )
 
 logger.remove(0)
-#logger.add(sys.stderr, level="DEBUG")
+# logger.add(sys.stderr, level="DEBUG")
 logger.add(sys.stderr, level="WARNING")
 
 
@@ -44,7 +45,7 @@ class BearerAuth(requests.auth.AuthBase):
         try:
             r.headers["authorization"] = "Bearer " + self.token
         except TypeError:
-            os.remove('dell_api/.cache.json')
+            os.remove(f'{self._home}/.cache.json')
             logger.info('cache file (with bad token) has just been deleted')
             raise SecretsInvalid(
                 'Could not create Bearer Auth Token, most likely credentials in <secrets.ini> are invalid')
@@ -53,13 +54,32 @@ class BearerAuth(requests.auth.AuthBase):
 
 class DellApi:
 
-    def _load_secrets(self) -> tuple:
+    def __init__(self):
+        self._home = str(Path.home())
+
+    def _create_secrets(self):
         config = configparser.ConfigParser()
-        config.read('dell_api/secrets.ini')
+        ci = getpass('Please specify client_id: ')
+        cs = getpass('Please specify client_secret: ')
+        # TODO: validate ci and cs
+        config['dell api'] = {'client_id': ci,
+                              'client_secret': cs}
+
+        with open(f'{self._home}/secrets.ini', 'w') as configfile:
+            config.write(configfile)
+
+    def _load_secrets(self) -> tuple:
+        if not os.path.isfile(f"{self._home}/secrets.ini"):
+            logger.warning(f"Secrets file is not exist! Creating ...")
+            self._create_secrets()
+
+        config = configparser.ConfigParser()
+        logger.debug('Files near to {} -> {}', sys.argv[0], os.listdir(self._home))
+        config.read(f'{self._home}/secrets.ini')
         return config.get('dell api', 'client_id'), config.get('dell api', 'client_secret')
 
     def _load_access_token(self) -> dict:
-        with open("dell_api/.cache.json") as j:
+        with open(f"{self._home}/.cache.json") as j:
             logger.debug('Loading access token from cache')
             return json.load(j)
 
@@ -75,7 +95,7 @@ class DellApi:
         data = {'access_token': access_token,
                 'timestamp': timestamp.isoformat()}
 
-        with open('dell_api/.cache.json', 'w') as j:
+        with open(f'{self._home}/.cache.json', 'w') as j:
             json.dump(data, j)
             logger.debug('The access token has just received and saved to cache')
 
@@ -90,7 +110,7 @@ class DellApi:
             return True
 
     def _get_access_token(self) -> str:
-        if not os.path.isfile("dell_api/.cache.json"):
+        if not os.path.isfile(f"{self._home}/.cache.json"):
             logger.debug('Did not find cache file')
             self._generate_access_token()
 
