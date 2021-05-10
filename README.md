@@ -117,4 +117,11 @@ $ dell_api -ad $(head -n1 ~/st_example.txt)
 }
 ```
 
+# TODO
+1. Looks like MANIFEST is don't needed anymore
+2. Standardize secrets.ini / cache.json, or create hidden dir inside ~/
+3. Split main module (API_worker, service_methods, arparse, exceptions, config for logger and traceback)
+4. Refactor warranty_handler
+5. Write some tests
+
                                                                 
