@@ -1,16 +1,26 @@
+# Overview
+Representation for [TechDirect API](https://techdirect.dell.com/portal/AboutAPIs.aspx) data.
+API's methods allow to receive data about warranty status, and device detail.
+
+## Client_ID & Client_Secret
+User has retrieved “client_id” and client_secret” from TechDirect API Team - https://techdirect.dell.com/portal.30/Login.aspx
+
 # Installation 
 `pip install dell-warranty-api`
 
-# Usage
-
 ## Specify secrets during first lunch
-Instruction here.
+```
+$ dell_api -w 1234567
+2021-05-10 06:48:54.521 | WARNING  | dell_api.__main__:_load_secrets:73 - Secrets file is not exist! Creating ...
+Please specify client_id:
+Please specify client_secret:
+```
 
 ## Asset Warranty
-
+Asset-entitlements endpoint could receive up to 100 service tags during one request. 
 ### Fetch warranty, several service tags should be separated via comma: 
 ```
-$ python3 -m dell_api -w 1234567,2345678
+$ dell_api -m dell_api -w 1234567,2345678
 +-------------+---------------+------------+------------------------------+------------+
 | Service Tag |    Country    |  Warranty  |            Remain            |  End Date  |
 +-------------+---------------+------------+------------------------------+------------+
@@ -50,8 +60,8 @@ $ nb -c device site=ACAE device_type.manufacturer.name=Dell --limit 10 | awk '{p
 $ dell_api -fw ~/st_example.txt
 ```
 ## Asset Details
+Asset-components endpoint could take only one service tag during one request.
 ### Table
-! This API method could process with only one service tag! 
 ```
 $ dell_api -d 1234567
 OR
