@@ -41,14 +41,19 @@ class BearerAuth(requests.auth.AuthBase):
     def __init__(self, token):
         self.token = token
 
-    def __call__(self, r):
+    def __call__(self, r: requests.models.PreparedRequest) -> requests.models.PreparedRequest:
         try:
             r.headers["authorization"] = "Bearer " + self.token
         except TypeError:
-            os.remove(f'{self._home}/.cache.json')
-            logger.info('cache file (with bad token) has just been deleted')
-            raise SecretsInvalid(
-                'Could not create Bearer Auth Token, most likely credentials in <secrets.ini> are invalid')
+            os.remove(f'{str(Path.home())}/.cache.json')
+            logger.info('cache file (with bad access token) has just been deleted')
+        finally:
+            # retry again
+            try:
+                r.headers["authorization"] = "Bearer " + self.token
+            except Exception as e:
+                logger('Something goes wrong! Original error {}', e)
+                raise SecretsInvalid
         return r
 
 
@@ -140,7 +145,7 @@ class DellApi:
     def print_asset_warranty(self, service_tags: list):
         print(self.asset_warranty(service_tags))
 
-    def asset_detail(self, service_tag: str) -> dict:
+    def asset_details(self, service_tag: str) -> dict:
         if isinstance(service_tag, list):
             logger.debug("Wrong type -> {}, {}", service_tag, type(service_tag))
             service_tag = service_tag[0]
@@ -150,8 +155,8 @@ class DellApi:
         answer = response.json()
         return answer
 
-    def print_asset_detail(self, service_tag: list):
-        print(self.asset_detail(service_tag))
+    def print_asset_details(self, service_tag: list):
+        print(self.asset_details(service_tag))
 
     def _servicetags_from_file(self, abspath: str) -> list:
         with open(f"{abspath}") as f:
@@ -288,7 +293,7 @@ class DellApi:
         if not self._service_tag_validate(service_tag):
             raise ServiceTagNotValid
 
-        json = self.asset_detail(service_tag)
+        json = self.asset_details(service_tag)
         components = json["components"]
         table = PrettyTable()
         table.field_names = [key for key in components[0]]
@@ -315,18 +320,42 @@ def main():
         'warranty_json': d.warranty_json,
         'asset_warranty': d.print_asset_warranty,
         'details': d.details_table,
-        'asset_detail': d.print_asset_detail,
+        'asset_details': d.print_asset_details,
     }
     unif: list = lambda x: x.split(',') if len(x.split(',')) > 1 else [x]
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    example_text = """
+    $ dell_api -w 1234567,2345678,3456789
+    +-------------+---------------+------------+------------------------------+------------+
+    | Service Tag |    Country    |  Warranty  |            Remain            |  End Date  |
+    +-------------+---------------+------------+------------------------------+------------+
+    |   2345678   | United States |   Basic    |           Expired            | 2011-10-06 |
+    |   3456789   |     Sweden    |   Basic    |           Expired            | 2007-11-03 |
+    |   1234567   | United States | ProSupport | 4 years, 2 months and 0 days | 2025-07-10 |
+    +-------------+---------------+------------+------------------------------+------------+
+    
+    $ dell_api -fw ~/st_example.txt
+    +-------------+---------------+------------+------------------------------+------------+
+    | Service Tag |    Country    |  Warranty  |            Remain            |  End Date  |
+    +-------------+---------------+------------+------------------------------+------------+
+    |   2345678   | United States |   Basic    |           Expired            | 2011-10-06 |
+    |   3456789   |     Sweden    |   Basic    |           Expired            | 2007-11-03 |
+    |   1234567   | United States | ProSupport | 4 years, 2 months and 0 days | 2025-07-10 |
+    +-------------+---------------+------------+------------------------------+------------+
+    
+    """
 
-    parser.add_argument('-w', '--warranty', help='service tags')
-    parser.add_argument('-j', '--warranty_json', help='service tags')
-    parser.add_argument('-d', '--details', help='service tag')
-    parser.add_argument('-aw', '--asset_warranty', help='service tag')
-    parser.add_argument('-ad', '--asset_detail', help='service tag')
-    parser.add_argument('-f', '--file', help='service tag', action='store_true', default=False)
+    parser = argparse.ArgumentParser(description="CLI for fetching data from Dell API",
+                                     epilog=example_text,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('-w', '--warranty', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-j', '--warranty_json', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-d', '--details', help='Arg=(service tag)')
+    parser.add_argument('-aw', '--asset_warranty', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-ad', '--asset_details', help='Arg=(service tag)')
+    parser.add_argument('-f', '--file', help='Used with -w or -d flag, Arg=(abspath to file with service tag/s)',
+                        action='store_true', default=False)
 
     args = parser.parse_args()
     logger.debug("argparse namespace: {}", args)
