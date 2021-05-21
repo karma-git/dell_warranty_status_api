@@ -344,7 +344,7 @@ def main():
         'details': d.details_table,
         'asset_details': d.print_asset_details,
     }
-    unif: list = lambda x: x.split(',') if len(x.split(',')) > 1 else [x]
+    #unif: list = lambda x: x.split(',') if len(x.split(',')) > 1 else [x]
 
     example_text = """
     $ dell_api -w 1234567,2345678,3456789
@@ -371,21 +371,23 @@ def main():
                                      epilog=example_text,
                                      formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('-w', '--warranty', help='Arg=(service tag OR comma separated service tags(up to 100))')
-    parser.add_argument('-j', '--warranty_json', help='Arg=(service tag OR comma separated service tags(up to 100))')
-    parser.add_argument('-d', '--details', help='Arg=(service tag)')
-    parser.add_argument('-aw', '--asset_warranty', help='Arg=(service tag OR comma separated service tags(up to 100))')
-    parser.add_argument('-ad', '--asset_details', help='Arg=(service tag)')
+    parser.add_argument('-w', '--warranty', nargs='*', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-j', '--warranty_json', nargs='*', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-d', '--details', nargs='*', help='Arg=(service tag)')
+    parser.add_argument('-aw', '--asset_warranty', nargs='*', help='Arg=(service tag OR comma separated service tags(up to 100))')
+    parser.add_argument('-ad', '--asset_details', nargs='*', help='Arg=(service tag)')
     parser.add_argument('-f', '--file', help='Used with -w or -d flag, Arg=(abspath to file with service tag/s)',
                         action='store_true', default=False)
 
+
     args = parser.parse_args()
     logger.debug("argparse namespace: {}", args)
+    print(args)
 
     for command in args.__dict__:
         cv = args.__dict__[command]
         if cv is not None:
-            cv = d.servicetags_from_file(cv) if args.file == True else d.st_array(cv)
+            cv = d.servicetags_from_file(cv) if args.file == True else d.st_array(cv[0])
             logger.debug("Service Tag -> {}", cv)
             break
 
