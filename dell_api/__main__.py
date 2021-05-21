@@ -22,7 +22,7 @@ pretty_errors.configure(
 
 logger.remove(0)
 # logger.add(sys.stderr, level="DEBUG")
-logger.add(sys.stderr, level="WARNING")
+#logger.add(sys.stderr, level="CRITICAL")
 
 
 class TooManyServiceTags(Exception):
@@ -158,6 +158,15 @@ class DellApi:
     def print_asset_details(self, service_tag: list):
         print(self.asset_details(service_tag))
 
+    def st_array(self, user_arg: str) -> list:
+        if ' ' in user_arg:
+            st = user_arg.split()
+        elif ',' in user_arg:
+            st = user_arg.split(',')
+        else:
+            st = [user_arg]
+        return st
+
     def _servicetags_from_file(self, abspath: str) -> list:
         with open(f"{abspath}") as f:
             return [st.strip() for st in f]
@@ -230,11 +239,15 @@ class DellApi:
                 try:
                     region = pycountry.countries.get(alpha_2=tag['countryCode']).name
                 except AttributeError:
-                    region = tag['countryCode']
-                    logger.warning('Could not parse country code -> {}', region)
+                    if tag['countryCode'] == 'XM':
+                        region = 'Hong Kong'
+                    else:
+                        region = tag['countryCode']
+                        logger.warning('Could not parse country code -> {}', region)
 
                 services = []
-                services_dates = []
+                services_start_dates = []
+                services_end_dates = []
                 # Searching for WarrantyType and End Date:
 
                 for entitlement in tag['entitlements']:
@@ -242,11 +255,16 @@ class DellApi:
                     if isinstance(entitlement['serviceLevelDescription'], type(None)):
                         continue
 
-                    services_dates.append(entitlement['endDate'])
+                    services_start_dates.append(entitlement['startDate'])
+                    services_end_dates.append(entitlement['endDate'])
                     services.append(entitlement['serviceLevelDescription'])
 
-                warranty_end_date: datetime.datetime = sorted(
-                    list(map(self._strdate_datetime, services_dates))).pop()
+                logger.warning("start dates: {}", services_start_dates)
+                highest_date = lambda dates: sorted(list(map(self._strdate_datetime, dates))).pop()
+                warranty_start_date = highest_date(services_start_dates)
+                warranty_end_date = highest_date(services_end_dates)
+                # warranty_end_date: datetime.datetime = sorted(
+                # list(map(self._strdate_datetime, services_end_dates))).pop()
 
                 remains = self._warranty_remains(warranty_end_date)
                 warranty = self._warranty_type_handler(services)
@@ -255,14 +273,18 @@ class DellApi:
                              "Country": region,
                              "Warranty": warranty,
                              "Remain": remains,
-                             "End Date": warranty_end_date.strftime('%Y-%m-%d')})
+                             "Start Date": warranty_start_date.strftime('%Y-%m-%d'),
+                             "End Date": warranty_end_date.strftime('%Y-%m-%d'),
+                             })
             except Exception as e:
                 logger.warning("Some error -> {}", e)
                 data.append({"Service Tag": tag['serviceTag'],
                              "Country": e,
                              "Warranty": '',
                              "Remain": '',
-                             "End Date": ''})
+                             'Start Date': '',
+                             "End Date": '',
+                             })
 
         return data
 
@@ -283,7 +305,7 @@ class DellApi:
         table.field_names = [key for key in data[0]]
         for row in data:
             table.add_row([row[key] for key in row])
-        print(table)
+        print(table, f'Total: {len(data)}', sep='\n')
 
     def details_table(self, service_tag: str):
         if isinstance(service_tag, list):
@@ -363,7 +385,7 @@ def main():
     for command in args.__dict__:
         cv = args.__dict__[command]
         if cv is not None:
-            cv = d.servicetags_from_file(cv) if args.file == True else unif(cv)
+            cv = d.servicetags_from_file(cv) if args.file == True else d.st_array(cv)
             logger.debug("Service Tag -> {}", cv)
             break
 
