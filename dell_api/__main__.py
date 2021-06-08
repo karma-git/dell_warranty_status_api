@@ -21,7 +21,7 @@ pretty_errors.configure(
 )
 
 logger.remove(0)
-# logger.add(sys.stderr, level="DEBUG")
+#logger.add(sys.stderr, level="TRACE")
 #logger.add(sys.stderr, level="CRITICAL")
 
 
@@ -229,6 +229,7 @@ class DellApi:
             return b
 
     def _warranty_handler(self, resp: list) -> list[dict]:
+        logger.debug('data into handler: {}', resp)
         data = []  # ServiceTag, Region, Warranty, Elapsed, EndDate
 
         for tag in resp:
@@ -261,7 +262,8 @@ class DellApi:
 
                 logger.warning("start dates: {}", services_start_dates)
                 highest_date = lambda dates: sorted(list(map(self._strdate_datetime, dates))).pop()
-                warranty_start_date = highest_date(services_start_dates)
+                lowest_date = lambda dates: sorted(list(map(self._strdate_datetime, dates))).pop(0)
+                warranty_start_date = lowest_date(services_start_dates)
                 warranty_end_date = highest_date(services_end_dates)
                 # warranty_end_date: datetime.datetime = sorted(
                 # list(map(self._strdate_datetime, services_end_dates))).pop()
@@ -285,8 +287,9 @@ class DellApi:
                              'Start Date': '',
                              "End Date": '',
                              })
+        logger.debug(data)
 
-        return data
+        return data[::-1]
 
     def servicetags_from_file(self, abspath) -> list:
         with open(f"{abspath}") as f:
@@ -355,7 +358,7 @@ def main():
     |   3456789   |     Sweden    |   Basic    |           Expired            | 2007-11-03 |
     |   1234567   | United States | ProSupport | 4 years, 2 months and 0 days | 2025-07-10 |
     +-------------+---------------+------------+------------------------------+------------+
-    
+
     $ dell_api -fw ~/st_example.txt
     +-------------+---------------+------------+------------------------------+------------+
     | Service Tag |    Country    |  Warranty  |            Remain            |  End Date  |
@@ -364,7 +367,7 @@ def main():
     |   3456789   |     Sweden    |   Basic    |           Expired            | 2007-11-03 |
     |   1234567   | United States | ProSupport | 4 years, 2 months and 0 days | 2025-07-10 |
     +-------------+---------------+------------+------------------------------+------------+
-    
+
     """
 
     parser = argparse.ArgumentParser(description="CLI for fetching data from Dell API",
@@ -382,12 +385,12 @@ def main():
 
     args = parser.parse_args()
     logger.debug("argparse namespace: {}", args)
-    print(args)
 
     for command in args.__dict__:
         cv = args.__dict__[command]
         if cv is not None:
-            cv = d.servicetags_from_file(cv) if args.file == True else d.st_array(cv[0])
+            cv = ' '.join(cv) if len(cv) > 1 else cv[0]
+            cv = d.servicetags_from_file(cv) if args.file == True else d.st_array(cv)
             logger.debug("Service Tag -> {}", cv)
             break
 
