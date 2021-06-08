@@ -246,6 +246,7 @@ class DellApi:
                         region = tag['countryCode']
                         logger.warning('Could not parse country code -> {}', region)
 
+                model = tag['productLineDescription']
                 services = []
                 services_start_dates = []
                 services_end_dates = []
@@ -272,6 +273,7 @@ class DellApi:
                 warranty = self._warranty_type_handler(services)
 
                 data.append({"Service Tag": st,
+                             "Model": model,
                              "Country": region,
                              "Warranty": warranty,
                              "Remain": remains,
